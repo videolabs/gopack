@@ -76,6 +76,10 @@ func (d *Dep) Get() {
 		if err != nil {
 			fail(err)
 		}
+		err = scm.Clean(d)
+		if err != nil {
+			fail(err)
+		}
 		err = scm.Init(d)
 		if err != nil {
 			fail(err)
@@ -209,13 +213,16 @@ func (d *Dep) Src() string {
 
 // switch the dep to the appropriate branch or tag
 func (d *Dep) switchToBranchOrTag() error {
-	err := d.cdSrc()
+	scm, err := NewScm(d)
+	err = scm.Clean(d)
 	if err != nil {
 		return err
 	}
 
-	scm, err := NewScm(d)
-
+	err = d.cdSrc()
+	if err != nil {
+		return err
+	}
 	if err != nil {
 		log.Println(err)
 	} else {
@@ -227,6 +234,15 @@ func (d *Dep) switchToBranchOrTag() error {
 	}
 
 	return cdHome()
+}
+
+func (d *Dep) IsPathExist() bool {
+	stat, err := os.Stat(d.Src())
+	if err != nil {
+		return false
+	}
+
+	return stat.IsDir()
 }
 
 // Tell the scm where the dependency is hosted.

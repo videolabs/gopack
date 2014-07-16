@@ -26,6 +26,7 @@ type Scm interface {
 	Checkout(d *Dep) error
 	Fetch(path string) error
 	DownloadCommand(source, path string) *exec.Cmd
+	Clean(d *Dep) error
 }
 
 func dependencyPath(importPath string) string {
@@ -97,6 +98,18 @@ func (g Git) Fetch(path string) error {
 	})
 }
 
+func (g Git) Clean(d *Dep) error {
+	if (d.IsPathExist()) {
+		path := findInSource(d, HiddenGit)
+		if path != nil {
+			return runInPath(*path, func() error {
+				return exec.Command("git", "reset", "--hard").Run()
+			})
+		}
+	}
+	return nil
+}
+
 type Hg struct{}
 
 func (h Hg) Init(d *Dep) error {
@@ -123,6 +136,18 @@ func (h Hg) Fetch(path string) error {
 	return runInPath(path, func() error {
 		return exec.Command("hg", "pull").Run()
 	})
+}
+
+func (h Hg) Clean(d *Dep) error {
+	if (d.IsPathExist()) {
+		path := findInSource(d, HiddenHg)
+		if path != nil {
+			return runInPath(*path, func() error {
+				return exec.Command("hg", "revert", "-C").Run()
+			})
+		}
+	}
+	return nil
 }
 
 type Svn struct {
@@ -157,6 +182,18 @@ func (s Svn) Fetch(path string) error {
 	})
 }
 
+func (s Svn) Clean(d *Dep) error {
+	if (d.IsPathExist()) {
+		path := findInSource(d, HiddenSvn)
+		if path != nil {
+			return runInPath(*path, func() error {
+				return exec.Command("svn", "revert", "--depth=infinity", ".").Run()
+			})
+		}
+	}
+	return nil
+}
+
 type Bzr struct {
 }
 
@@ -189,6 +226,18 @@ func (b Bzr) Fetch(path string) error {
 	})
 }
 
+func (b Bzr) Clean(d *Dep) error {
+	if (d.IsPathExist()) {
+		path := findInSource(d, HiddenBzr)
+		if path != nil {
+			return runInPath(*path, func() error {
+				return exec.Command("bzr", "revert", "--no-backup").Run()
+			})
+		}
+	}
+	return nil
+}
+
 // The Go scm embeds another scm and only implements Init so that
 // deps that don't specify a scm keep working like they did before
 type Go struct {
@@ -201,6 +250,13 @@ func (g Go) Init(d *Dep) error {
 
 func (g Go) DownloadCommand(source, path string) *exec.Cmd {
 	return exec.Command("go", "get", "-d", "-u", source)
+}
+
+func (g Go) Clean(d *Dep) error {
+	if g.Scm != nil {
+		return g.Scm.Clean(d)
+	}
+	return nil
 }
 
 func NewScm(d *Dep) (Scm, error) {
@@ -236,6 +292,23 @@ func scmInSource(d *Dep) Scm {
 			if d.scmPath(path.Join(initPath, HiddenDirs[key])) {
 				return scm
 			}
+		}
+		initPath = path.Join(initPath, "..")
+	}
+
+	return nil
+}
+
+// Traverse the source tree backwards until
+// it finds the right directory
+// or it arrives to the base of the import.
+func findInSource(d *Dep, scmString string) *string {
+	parts := strings.Split(d.Import, "/")
+	initPath := d.Src()
+
+	for _, _ = range parts {
+		if d.scmPath(path.Join(initPath, scmString)) {
+			return &initPath
 		}
 		initPath = path.Join(initPath, "..")
 	}
