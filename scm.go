@@ -143,7 +143,8 @@ func (h Hg) Clean(d *Dep) error {
 		path := findInSource(d, HiddenHg)
 		if path != nil {
 			return runInPath(*path, func() error {
-				return exec.Command("hg", "revert", "-C").Run()
+				println(*path)
+				return exec.Command("hg", "revert", "-C", "--all").Run()
 			})
 		}
 	}
@@ -249,6 +250,7 @@ func (g Go) Init(d *Dep) error {
 }
 
 func (g Go) DownloadCommand(source, path string) *exec.Cmd {
+	println("go", "get", "-d", "-u", source)
 	return exec.Command("go", "get", "-d", "-u", source)
 }
 
@@ -270,7 +272,7 @@ func NewScm(d *Dep) (Scm, error) {
 	}
 
 	scm := scmInSource(d)
-
+	fmt.Printf("%s %#v\n", d.Scm, scm)
 	if d.Scm == "go" {
 		return Go{scm}, nil
 	} else if scm != nil {

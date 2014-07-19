@@ -32,3 +32,5 @@ errors
 
 .gopack/
 dist
+
+*~

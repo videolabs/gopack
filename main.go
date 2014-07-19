@@ -46,16 +46,17 @@ func main() {
 	if deps == nil {
 		fail("Error loading dependency info")
 	}
-
-	switch os.Args[1] {
-	case "dependencytree":
-		deps.PrintDependencyTree()
-	case "stats":
-		p.PrintSummary()
-	case "installdeps":
-		deps.Install(config.Repository)
-	default:
-		runCommand()
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "dependencytree":
+			deps.PrintDependencyTree()
+		case "stats":
+			p.PrintSummary()
+		case "installdeps":
+			deps.Install(config.Repository)
+		default:
+			runCommand()
+		}
 	}
 }
 
@@ -182,6 +183,7 @@ func logcolor(c uint8, s string, args ...interface{}) {
 
 func failf(s string, args ...interface{}) {
 	fmtcolor(Red, s, args...)
+	panic("pouic")
 	os.Exit(1)
 }
 
@@ -189,6 +191,7 @@ func fail(a ...interface{}) {
 	fmt.Printf("\033[%dm", Red)
 	fmt.Print(a)
 	fmt.Printf(EndColor)
+	panic("pouac")
 	os.Exit(1)
 }
 
